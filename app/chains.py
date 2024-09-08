@@ -4,9 +4,6 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.exceptions import OutputParserException
-import chromadb
-from chromadb.utils import embedding_functions
-from chromadb.config import Settings
 
 load_dotenv()
 
@@ -18,9 +15,6 @@ class Chain:
             model_name="llama-3.1-70b-versatile"
         )
 
-        self.client = chromadb.PersistentClient('vectorstore')
-        self.collection = self.client.get_or_create_collection("resume_data")
-
     def extract_resume_info(self, resume_text):
         prompt = PromptTemplate.from_template(
             """
@@ -30,8 +24,8 @@ class Chain:
             1. **Personal Info**: Website, LinkedIn, GitHub, email, phone.
             2. **Skills**: List of skills.
             3. **Work Experience**: 
-            - **Roles**: Titles and descriptions.
-            - **Experience**: Dates and descriptions.
+                - **Roles**: Titles and descriptions.
+                - **Experience**: Dates and descriptions.
             4. **Projects**: List with descriptions.
             Return only the JSON.
             ### VALID JSON (NO PREAMBLE):
@@ -98,18 +92,25 @@ class Chain:
             """
             ### JOB DESCRIPTION:
             {job_desc}
+
             ### {student_name}'s PORTFOLIO:
             {resume}
+
             ### INSTRUCTION:
-            You are {student_name}, a computer science student at {college}. Write a compelling cold email for the job described above. Make sure to personalize the email based on the following instructions:
-                1. **Align Skills and Experiences**: Highlight how {student_name}'s skills and past work experiences directly match the key requirements and responsibilities mentioned in the job description.
-                2. **Showcase Relevant Projects**: Provide examples of specific projects from {student_name}'s portfolio that demonstrate relevant skills and experience that are highly applicable to the role.
-                3. **Highlight Unique Traits**: Use the unique traits provided by {student_name} to explain what makes them stand out as a candidate. Specifically include these details:
-                    - **Personal Traits**: {personal_content}
-                    - **Corporate Life Perspective**: {corporate_life_values}
-                4. **Align Values with Company Culture**: Illustrate how {student_name}'s values and experiences align with the company's culture, mission, and values. Make sure to draw connections between {student_name}'s personal traits and corporate life perspective with the company's ethos.
-                5. **Explain Motivation and Fit**: Clearly articulate why {student_name} is interested in this particular company and role. Mention specific aspects of the company’s work, reputation, culture, or mission that appeal to {student_name} and how these align with their career aspirations.
-            Ensure that the email is concise, engaging, and directly relevant to the job description.
+            You are {student_name}, a computer science student at {college}. Write a compelling cold email to the hiring manager for the job described above. The email should sound natural and include the following elements:
+            1. **Align Skills and Experiences**: Clearly highlight how your skills and past work experiences align with the key requirements and responsibilities mentioned in the job description.
+            2. **Showcase Relevant Projects**: Mention specific projects from your portfolio that demonstrate the relevant skills and experience applicable to the role.
+            3. **Highlight Unique Traits**: Explain what makes you stand out as a candidate by including:
+                - **Personal Traits**: {personal_content}
+                - **Corporate Life Perspective**: {corporate_life_values}
+            4. **Align Values with Company Culture**: Illustrate how your values and experiences align with the company's culture, mission, and values. Connect your personal traits and corporate perspective with the company's ethos.
+            5. **Explain Motivation and Fit**: Articulate why you are interested in this company and role. Mention specific aspects of the company’s work, reputation, culture, or mission that appeal to you and align with your career goals.
+            6. **Call to Action**: Request a brief call to discuss how your skills and passion could benefit the team.
+            Ensure the email is concise, engaging, and directly relevant to the job description. The goal is to express your interest, demonstrate you are the right fit, and include a clear call to action to discuss how your skills and passion can benefit their team.
+
+            ### GOAL OF THE EMAIL:
+            You have already applied for the job. Now you are sending a follow-up email to the hiring manager to express your interest, demonstrate fit, and request a discussion about how your skills and passion can benefit their team.
+
             ### EMAIL (NO PREAMBLE):
             """
         )
@@ -125,42 +126,6 @@ class Chain:
         })
         
         return response.content
-
-    def store_in_chroma_db(self, resume_info):
-
-        if not resume_info:
-            raise ValueError("No resume information provided to store.")
-
-        # Prepare documents and metadata for Chroma DB
-        documents = []
-        metadata_list = []
-
-        if 'personal_info' in resume_info:
-            documents.append(str(resume_info['personal_info']))
-            metadata_list.append({"type": "personal_info"})
-        if 'skills' in resume_info:
-            documents.append(str(resume_info['skills']))
-            metadata_list.append({"type": "skills"})
-        if 'work_experience' in resume_info:
-            documents.append(str(resume_info['work_experience']))
-            metadata_list.append({"type": "work_experience"})
-        if 'projects' in resume_info:
-            documents.append(str(resume_info['projects']))
-            metadata_list.append({"type": "projects"})
-
-        # Add documents to Chroma DB collection
-        self.collection.add(
-            ids=[f"doc_{i}" for i in range(len(documents))],  # Unique IDs for each document
-            documents=documents,
-            metadatas=metadata_list
-        )
-
-    def query(self, role, experience, skills):
-        combined_query_texts = role + experience + skills
-        # Perform the query on the Chroma collection
-        query_result = self.collection.query(query_texts=combined_query_texts, n_results=2)
-        # Extract and return the metadata from the query results
-        return query_result.get('metadatas', [])
 
 if __name__ == "__main__":
     print(os.getenv("GROQ_API_KEY"))
