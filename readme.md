@@ -29,7 +29,7 @@ The Cold Email Generator helps computer science students craft personalized cold
 
 4. **Run the Application**:
    ```bash
-   streamlit run app.py
+   streamlit run app/main.py
    ```
 
 ## Usage
