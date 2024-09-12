@@ -1,6 +1,6 @@
 # App - Cold Email Generator
 
-The Cold Email Generator helps computer science students craft personalized cold emails to hiring managers using Llama3.1 LLM, Langchain, and Streamlit.
+The Cold Email Generator helps computer science students craft personalized cold emails to hiring managers using Llama3.1 LLM, Langchain, and Streamlit and Streamlit Community Cloud for deployment.
 
 ## Features
 
